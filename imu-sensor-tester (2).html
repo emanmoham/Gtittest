@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>أداة اختبار مستشعرات الهاتف - IMU</title>
+<style>
+  :root{
+    --bg:#0f1115;
+    --card:#1a1d24;
+    --card2:#22262f;
+    --accent:#4f8cff;
+    --accent2:#3ecf8e;
+    --danger:#ff5d5d;
+    --warn:#ffb454;
+    --text:#e8eaed;
+    --text-dim:#9aa0ab;
+    --border:#2c303a;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f5f6f8;
+      --card:#ffffff;
+      --card2:#f0f1f4;
+      --text:#1a1d24;
+      --text-dim:#5a6070;
+      --border:#e1e3e8;
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    height:100%;
+    margin:0;
+  }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Segoe UI", Tahoma, Arial, sans-serif;
+    padding:16px;
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+    padding-bottom:calc(24px + env(safe-area-inset-bottom,0px));
+    max-width:520px;
+    margin:0 auto;
+    line-height:1.6;
+  }
+  h1{
+    font-size:1.25rem;
+    margin:4px 0 4px;
+  }
+  .subtitle{
+    color:var(--text-dim);
+    font-size:0.85rem;
+    margin-bottom:16px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:14px;
+  }
+  .btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    padding:14px 16px;
+    font-size:1rem;
+    font-weight:600;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    color:#fff;
+    background:var(--accent);
+    transition:opacity .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{opacity:.8;}
+  .btn:disabled{
+    background:var(--card2);
+    color:var(--text-dim);
+    cursor:not-allowed;
+  }
+  .btn-row{
+    display:flex;
+    gap:10px;
+    margin-top:10px;
+  }
+  .btn-row .btn{flex:1;}
+  .btn-record{background:var(--accent2);}
+  .btn-stop{background:var(--danger);}
+  .btn-secondary{
+    background:var(--card2);
+    color:var(--text);
+    border:1px solid var(--border);
+  }
+  .status-badge{
+    display:inline-block;
+    padding:4px 10px;
+    border-radius:999px;
+    font-size:0.8rem;
+    font-weight:600;
+    margin-bottom:12px;
+  }
+  .badge-off{background:var(--card2);color:var(--text-dim);}
+  .badge-on{background:rgba(62,207,142,0.15);color:var(--accent2);}
+  .badge-rec{background:rgba(255,93,93,0.15);color:var(--danger);}
+  .grid3{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:8px;
+    text-align:center;
+  }
+  .grid3 .cell{
+    background:var(--card2);
+    border-radius:10px;
+    padding:10px 4px;
+  }
+  .grid3 .label{
+    font-size:0.72rem;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .grid3 .value{
+    font-size:1rem;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    direction:ltr;
+    display:block;
+  }
+  .section-title{
+    font-size:0.9rem;
+    font-weight:700;
+    margin:0 0 10px;
+    color:var(--text-dim);
+  }
+  .stats-row{
+    display:flex;
+    justify-content:space-between;
+    padding:8px 0;
+    border-bottom:1px dashed var(--border);
+    font-size:0.9rem;
+  }
+  .stats-row:last-child{border-bottom:none;}
+  .stats-row .val{
+    font-weight:700;
+    direction:ltr;
+  }
+  .msg{
+    padding:12px 14px;
+    border-radius:10px;
+    font-size:0.88rem;
+    margin-bottom:14px;
+  }
+  .msg-error{background:rgba(255,93,93,0.12);color:var(--danger);border:1px solid rgba(255,93,93,0.3);}
+  .msg-warn{background:rgba(255,180,84,0.12);color:var(--warn);border:1px solid rgba(255,180,84,0.3);}
+  .hidden{display:none !important;}
+  .footnote{
+    font-size:0.78rem;
+    color:var(--text-dim);
+    background:var(--card2);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-top:16px;
+  }
+  .footnote strong{color:var(--text);}
+  select, input[type=text]{
+    width:100%;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--card2);
+    color:var(--text);
+    font-size:0.9rem;
+  }
+  label.field-label{
+    font-size:0.82rem;
+    color:var(--text-dim);
+    display:block;
+    margin-bottom:6px;
+  }
+</style>
+</head>
+<body>
+
+<h1>🧪 اختبار مستشعرات الهاتف (IMU)</h1>
+<div class="subtitle">أداة أولية لفحص جودة إشارة التسارع والجايروسكوب — مشروع تحليل نمط المشي</div>
+
+<div id="unsupportedMsg" class="msg msg-error hidden">
+  المتصفح لا يدعم DeviceMotionEvent على هذا الجهاز. جرّب متصفحاً آخر (Safari على iOS، أو Chrome على أندرويد) أو تأكد أن الصفحة مفتوحة عبر HTTPS.
+</div>
+
+<div id="deniedMsg" class="msg msg-error hidden">
+  تم رفض إذن الوصول للمستشعرات. لتفعيله يدوياً: افتح إعدادات المتصفح ← الخصوصية/إعدادات الموقع ← فعّل إذن "الحركة والاتجاه" لهذه الصفحة، ثم أعد تحميلها.
+</div>
+
+<div id="noAccelMsg" class="msg msg-warn hidden">
+  تنبيه: بعض الحقول تعود بقيم فارغة (null) من هذا الجهاز/المتصفح. هذا شائع لبعض المتصفحات على أندرويد التي لا توفر acceleration بدون الجاذبية، أو للمتصفحات التي لا تدعم rotationRate. سيتم عرض "—" في هذه الحالة، وسيتم تسجيلها في CSV كخانة فارغة.
+</div>
+
+<div class="card">
+  <span id="statusBadge" class="status-badge badge-off">غير مفعّل</span>
+  <button id="permBtn" class="btn">تفعيل المستشعرات</button>
+</div>
+
+<div class="card">
+  <div class="section-title">القراءة الحية</div>
+  <div style="margin-bottom:10px;font-size:0.8rem;color:var(--text-dim);">Accelerometer (م/ث²)</div>
+  <div class="grid3">
+    <div class="cell"><span class="label">X</span><span id="accX" class="value">—</span></div>
+    <div class="cell"><span class="label">Y</span><span id="accY" class="value">—</span></div>
+    <div class="cell"><span class="label">Z</span><span id="accZ" class="value">—</span></div>
+  </div>
+  <div style="margin:14px 0 10px;font-size:0.8rem;color:var(--text-dim);">Gyroscope (درجة/ثانية)</div>
+  <div class="grid3">
+    <div class="cell"><span class="label">alpha</span><span id="gyroA" class="value">—</span></div>
+    <div class="cell"><span class="label">beta</span><span id="gyroB" class="value">—</span></div>
+    <div class="cell"><span class="label">gamma</span><span id="gyroG" class="value">—</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <label class="field-label" for="posSelect">موضع الهاتف أثناء هذا التسجيل (اختياري — يُحفظ فقط لفائدتك، لا يُضاف لملف CSV)</label>
+  <select id="posSelect">
+    <option value="">— غير محدد —</option>
+    <option value="pocket">جيب</option>
+    <option value="belt">حزام</option>
+    <option value="hand">يد</option>
+    <option value="other">أخرى</option>
+  </select>
+
+  <div class="btn-row" style="margin-top:14px;">
+    <button id="recordBtn" class="btn btn-record" disabled>بدء التسجيل</button>
+    <button id="clearBtn" class="btn btn-secondary" disabled>مسح</button>
+  </div>
+
+  <div style="margin-top:16px;">
+    <div class="stats-row"><span>حالة التسجيل</span><span id="recStatus" class="val">متوقف</span></div>
+    <div class="stats-row"><span>عدد العينات</span><span id="sampleCount" class="val">0</span></div>
+    <div class="stats-row"><span>المدة (ث)</span><span id="duration" class="val">0.0</span></div>
+    <div class="stats-row"><span>معدل العينات الفعلي (Hz)</span><span id="actualHz" class="val">—</span></div>
+  </div>
+
+  <button id="downloadBtn" class="btn" style="margin-top:14px;background:var(--accent);" disabled>تنزيل CSV</button>
+
+  <div id="wakeLockNote" style="display:none;margin-top:12px;font-size:0.78rem;color:var(--text-dim);background:var(--card2);border-radius:8px;padding:8px 10px;"></div>
+</div>
+
+<div class="footnote">
+  <strong>ملاحظة مهمة:</strong> معدل أخذ العينات في المتصفح <strong>غير ثابت</strong> ويتراوح تقريباً بين 30 و60 هرتز، ويعتمد على الجهاز والمتصفح ونشاط الصفحة (ويمكن أن ينخفض إذا انتقل المتصفح للخلفية). هذا مناسب <strong>للاختبار الأولي فقط</strong> لفحص جودة الإشارة ومقارنة مواضع الهاتف. أما التطبيق النهائي للبحث فسيحتاج إلى استخدام <strong>SensorManager</strong> على أندرويد أو <strong>Core Motion</strong> على iOS للتحكم بمعدل عينات ثابت (50–100 هرتز)، لأن التحليل الدقيق لنمط المشي (مثل استخراج خطوات الدورة الحركية بواسطة FFT أو اكتشاف الذروات) يتأثر بعدم انتظام الفاصل الزمني بين العينات.
+  <br><br>
+  ملاحظات إضافية يجب مراعاتها عند التخطيط للتطبيق النهائي:
+  <br>• التوقيت المسجل هنا (time_s) هو وقت استلام الحدث في المتصفح (performance.now)، وليس وقت أخذ العينة الفعلي من رقاقة المستشعر — فيه تأخير وتذبذب (jitter) غير معروف المقدار.
+  <br>• على iOS، القيمة acceleration (بدون جاذبية) غالباً متوفرة، لكن على كثير من متصفحات أندرويد تكون null دائماً، وسيظهر ذلك في هذه الأداة كتحذير أو خانات فارغة.
+  <br>• rotationRate قد لا يكون مدعوماً على بعض الأجهزة القديمة أو بعض المتصفحات، حتى لو نجح إذن الوصول العام.
+  <br>• الأداة تحاول إبقاء الشاشة مفعّلة تلقائياً أثناء التسجيل (Wake Lock)، لكن هذا مدعوم فقط على Chrome/Edge على أندرويد وSafari الحديث على iOS (17.4+)؛ إذا لم يكن مدعوماً على جهازك ستظهر رسالة تنبيه، وينصح حينها بتعطيل الإغلاق التلقائي للشاشة يدوياً من إعدادات الهاتف. كما أن تبديل التطبيقات (لا مجرد إغلاق الشاشة) يوقف استلام الأحداث دائماً بغض النظر عن Wake Lock.
+  <br>• هذه الأداة لا ترسل أي بيانات لأي خادم؛ كل شيء يبقى محلياً في المتصفح حتى تنزيله.
+</div>
+
+<script>
+(function(){
+  const permBtn = document.getElementById('permBtn');
+  const statusBadge = document.getElementById('statusBadge');
+  const recordBtn = document.getElementById('recordBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const unsupportedMsg = document.getElementById('unsupportedMsg');
+  const deniedMsg = document.getElementById('deniedMsg');
+  const noAccelMsg = document.getElementById('noAccelMsg');
+  const posSelect = document.getElementById('posSelect');
+
+  const accX = document.getElementById('accX');
+  const accY = document.getElementById('accY');
+  const accZ = document.getElementById('accZ');
+  const gyroA = document.getElementById('gyroA');
+  const gyroB = document.getElementById('gyroB');
+  const gyroG = document.getElementById('gyroG');
+
+  const recStatus = document.getElementById('recStatus');
+  const sampleCountEl = document.getElementById('sampleCount');
+  const durationEl = document.getElementById('duration');
+  const actualHzEl = document.getElementById('actualHz');
+
+  let sensorsActive = false;
+  let recording = false;
+  let recordStartTime = null;
+  let samples = []; // {t, ax, ay, az, ga, gb, gg}
+  let usingIncludingGravity = false;
+  let warnedNoAccel = false;
+  let warnedNoGyro = false;
+  let statsTimer = null;
+  let wakeLock = null;
+  const wakeLockSupported = ('wakeLock' in navigator);
+
+  async function acquireWakeLock(){
+    if(!wakeLockSupported) return;
+    try{
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', function(){
+        wakeLock = null;
+      });
+    } catch(err){
+      wakeLock = null;
+      // Common cause: page not visible, or user/OS denied it. Not fatal — recording still works,
+      // it just means the screen may lock during recording.
+    }
+  }
+
+  async function releaseWakeLock(){
+    if(wakeLock){
+      try{ await wakeLock.release(); } catch(err){}
+      wakeLock = null;
+    }
+  }
+
+  // Re-acquire the wake lock if the tab regains visibility while still recording
+  // (the OS/browser force-releases it when the tab goes to background).
+  document.addEventListener('visibilitychange', async function(){
+    if(document.visibilityState === 'visible' && recording && wakeLockSupported && !wakeLock){
+      await acquireWakeLock();
+    }
+  });
+
+  function fmt(v){
+    return (v === null || v === undefined || Number.isNaN(v)) ? '—' : v.toFixed(2);
+  }
+
+  function setBadge(state){
+    statusBadge.classList.remove('badge-off','badge-on','badge-rec');
+    if(state === 'off'){ statusBadge.textContent = 'غير مفعّل'; statusBadge.classList.add('badge-off'); }
+    if(state === 'on'){ statusBadge.textContent = 'المستشعرات مفعّلة'; statusBadge.classList.add('badge-on'); }
+    if(state === 'rec'){ statusBadge.textContent = 'جارٍ التسجيل...'; statusBadge.classList.add('badge-rec'); }
+  }
+
+  function isSupported(){
+    return typeof window.DeviceMotionEvent !== 'undefined';
+  }
+
+  function handleMotion(event){
+    let ax=null, ay=null, az=null;
+    if(event.acceleration && (event.acceleration.x !== null && event.acceleration.x !== undefined)){
+      ax = event.acceleration.x; ay = event.acceleration.y; az = event.acceleration.z;
+      usingIncludingGravity = false;
+    } else if(event.accelerationIncludingGravity){
+      ax = event.accelerationIncludingGravity.x;
+      ay = event.accelerationIncludingGravity.y;
+      az = event.accelerationIncludingGravity.z;
+      usingIncludingGravity = true;
+      if(!warnedNoAccel){ warnedNoAccel = true; noAccelMsg.classList.remove('hidden'); }
+    } else {
+      if(!warnedNoAccel){ warnedNoAccel = true; noAccelMsg.classList.remove('hidden'); }
+    }
+
+    let ga=null, gb=null, gg=null;
+    if(event.rotationRate){
+      ga = event.rotationRate.alpha;
+      gb = event.rotationRate.beta;
+      gg = event.rotationRate.gamma;
+    } else {
+      if(!warnedNoGyro){ warnedNoGyro = true; noAccelMsg.classList.remove('hidden'); }
+    }
+
+    accX.textContent = fmt(ax);
+    accY.textContent = fmt(ay);
+    accZ.textContent = fmt(az);
+    gyroA.textContent = fmt(ga);
+    gyroB.textContent = fmt(gb);
+    gyroG.textContent = fmt(gg);
+
+    if(recording){
+      const t = (performance.now() - recordStartTime) / 1000;
+      samples.push({t, ax, ay, az, ga, gb, gg});
+    }
+  }
+
+  function startSensors(){
+    window.addEventListener('devicemotion', handleMotion);
+    sensorsActive = true;
+    setBadge('on');
+    permBtn.textContent = 'المستشعرات مفعّلة ✓';
+    permBtn.disabled = true;
+    recordBtn.disabled = false;
+  }
+
+  permBtn.addEventListener('click', async function(){
+    unsupportedMsg.classList.add('hidden');
+    deniedMsg.classList.add('hidden');
+
+    if(!isSupported()){
+      unsupportedMsg.classList.remove('hidden');
+      return;
+    }
+
+    // iOS 13+ requires explicit permission request
+    if(typeof DeviceMotionEvent.requestPermission === 'function'){
+      try{
+        const result = await DeviceMotionEvent.requestPermission();
+        if(result === 'granted'){
+          startSensors();
+        } else {
+          deniedMsg.classList.remove('hidden');
+        }
+      } catch(err){
+        deniedMsg.classList.remove('hidden');
+      }
+    } else {
+      // Android / non-iOS: no explicit permission API, just start listening
+      startSensors();
+    }
+  });
+
+  recordBtn.addEventListener('click', async function(){
+    if(!recording){
+      // start recording
+      samples = [];
+      recordStartTime = performance.now();
+      recording = true;
+      setBadge('rec');
+      recordBtn.textContent = 'إيقاف التسجيل';
+      recordBtn.classList.remove('btn-record');
+      recordBtn.classList.add('btn-stop');
+      clearBtn.disabled = true;
+      downloadBtn.disabled = true;
+      posSelect.disabled = true;
+      recStatus.textContent = 'جارٍ التسجيل...';
+
+      await acquireWakeLock();
+      updateWakeLockBadge();
+
+      statsTimer = setInterval(updateStats, 200);
+    } else {
+      // stop recording
+      recording = false;
+      clearInterval(statsTimer);
+      setBadge('on');
+      recordBtn.textContent = 'بدء التسجيل';
+      recordBtn.classList.remove('btn-stop');
+      recordBtn.classList.add('btn-record');
+      clearBtn.disabled = samples.length === 0;
+      downloadBtn.disabled = samples.length === 0;
+      posSelect.disabled = false;
+      recStatus.textContent = 'متوقف';
+      updateStats();
+
+      await releaseWakeLock();
+      updateWakeLockBadge();
+    }
+  });
+
+  function updateWakeLockBadge(){
+    const el = document.getElementById('wakeLockNote');
+    if(!el) return;
+    if(!wakeLockSupported){
+      el.textContent = 'ملاحظة: متصفحك لا يدعم قفل إبقاء الشاشة مفعّلة (Wake Lock) — يفضّل تعطيل الإغلاق التلقائي للشاشة يدوياً من إعدادات الهاتف قبل التسجيل.';
+      el.style.display = 'block';
+    } else if(recording && wakeLock){
+      el.textContent = '🔒 الشاشة مُبقاة مفعّلة أثناء التسجيل.';
+      el.style.display = 'block';
+    } else if(recording && !wakeLock){
+      el.textContent = 'تعذّر إبقاء الشاشة مفعّلة تلقائياً (قد يحدث هذا إذا كان توفير الطاقة مفعّلاً) — تجنّب إغلاق الشاشة يدوياً أثناء التسجيل.';
+      el.style.display = 'block';
+    } else {
+      el.style.display = 'none';
+    }
+  }
+
+  function updateStats(){
+    const n = samples.length;
+    sampleCountEl.textContent = n;
+    if(n === 0){
+      durationEl.textContent = '0.0';
+      actualHzEl.textContent = '—';
+      return;
+    }
+    const dur = samples[n-1].t - samples[0].t;
+    durationEl.textContent = dur.toFixed(1);
+    if(dur > 0 && n > 1){
+      actualHzEl.textContent = ((n-1)/dur).toFixed(1);
+    } else {
+      actualHzEl.textContent = '—';
+    }
+  }
+
+  clearBtn.addEventListener('click', function(){
+    samples = [];
+    updateStats();
+    downloadBtn.disabled = true;
+    clearBtn.disabled = true;
+    recStatus.textContent = 'متوقف';
+  });
+
+  function csvCell(v){
+    return (v === null || v === undefined || Number.isNaN(v)) ? '' : v;
+  }
+
+  downloadBtn.addEventListener('click', function(){
+    if(samples.length === 0) return;
+    let rows = ['time_s,acc_x,acc_y,acc_z,gyro_alpha,gyro_beta,gyro_gamma'];
+    for(const s of samples){
+      rows.push([
+        s.t.toFixed(4),
+        csvCell(s.ax !== null && s.ax !== undefined ? s.ax.toFixed(6) : s.ax),
+        csvCell(s.ay !== null && s.ay !== undefined ? s.ay.toFixed(6) : s.ay),
+        csvCell(s.az !== null && s.az !== undefined ? s.az.toFixed(6) : s.az),
+        csvCell(s.ga !== null && s.ga !== undefined ? s.ga.toFixed(6) : s.ga),
+        csvCell(s.gb !== null && s.gb !== undefined ? s.gb.toFixed(6) : s.gb),
+        csvCell(s.gg !== null && s.gg !== undefined ? s.gg.toFixed(6) : s.gg)
+      ].join(','));
+    }
+    const csvContent = rows.join('\n');
+    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const pos = posSelect.value ? '_' + posSelect.value : '';
+    const ts = new Date().toISOString().replace(/[:.]/g,'-');
+    a.href = url;
+    a.download = `imu_data${pos}_${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  // Initial support check on load (informational only, doesn't request permission)
+  if(!isSupported()){
+    unsupportedMsg.classList.remove('hidden');
+  }
+  if(!wakeLockSupported){
+    updateWakeLockBadge();
+  }
+
+  // Warn if page not served over HTTPS (motion sensors typically require secure context)
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'){
+    const secMsg = document.createElement('div');
+    secMsg.className = 'msg msg-warn';
+    secMsg.textContent = 'تنبيه: هذه الصفحة غير مفتوحة عبر HTTPS. أغلب المتصفحات تمنع الوصول للمستشعرات إلا على اتصال آمن (HTTPS) أو على localhost.';
+    document.body.insertBefore(secMsg, document.querySelector('.card'));
+  }
+})();
+</script>
+
+</body>
+</html>
